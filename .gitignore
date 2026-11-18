@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Camera captures and recordings
+test_camera.jpg
+*.mp4
+*.h264
+recordings/
+
+# System files
+.DS_Store

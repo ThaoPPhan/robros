@@ -1,0 +1,81 @@
+# Robros line-following vision config.
+# The /calibrate page rewrites only the values of the keys it controls (HSV, ROI,
+# glare, morphology, mode) in place, so comments here are preserved.
+# A backup is written to config.yaml.bak before every save.
+
+camera:
+  backend: picamera2        # picamera2 (CSI ribbon) | opencv (USB UVC / video file)
+  device: 0                 # opencv only: /dev/videoN index, device path or video file
+  width: 320                # 320x240 (fast) or 640x480
+  height: 240
+  fps: 30                   # requested sensor frame rate
+  hflip: false
+  vflip: false              # set both true if the camera is mounted upside down
+  opencv_fourcc: MJPG       # opencv only: MJPG lets most USB cameras reach 30 fps
+  # Lock auto-exposure / auto-white-balance N seconds after start so tape colour
+  # stays stable when glare patches come into view. 0 = keep auto.
+  lock_exposure_after: 2.0
+  controls: {}              # extra picamera2 controls, e.g. {ExposureTime: 8000, AnalogueGain: 2.0}
+
+detector:
+  mode: center              # center = follow a single tape line | lane = stay between two tape lines
+  # HSV thresholds in OpenCV units: H 0-179, S 0-255, V 0-255.
+  # Blue painter's tape is roughly H 90-130; green painter's tape is roughly H 35-85.
+  hsv_low: [90, 80, 40]
+  hsv_high: [130, 255, 255]
+  # Region of interest as fractions of image height (0 = top, 1 = bottom).
+  roi_top: 0.35             # everything above this is ignored
+  roi_bottom: 1.0
+  # Glare rejection: pixels at least this bright AND at most this saturated are
+  # removed from the mask (specular reflections on polished concrete).
+  glare_v_min: 220
+  glare_s_max: 60
+  blur: 5                   # Gaussian blur kernel before HSV (odd, 0 = off)
+  open_kernel: 3            # morphological open (removes speckle), px, 0 = off
+  close_kernel: 7           # morphological close (fills holes from glare), px, 0 = off
+  n_bands: 12               # horizontal scan bands across the ROI
+  min_band_fill: 0.3        # a column counts as tape if >= this fraction of the band is mask
+  min_run_px: 3             # narrowest blob (px, at configured width) accepted as tape
+  max_run_frac: 0.45        # widest blob accepted, as a fraction of image width
+  max_jump_frac: 0.15       # max sideways jump between neighbouring bands (fraction of width)
+  max_mask_frac: 0.5        # if more of the ROI than this is "tape", the HSV range is wrong -> lost
+  lane_width: 0.6           # lane mode: expected lane width (fraction of image width) when
+                            # only one boundary is visible; learned live when both are seen
+  lookahead: 0.5            # look-ahead point height above the ROI bottom, fraction of ROI height
+  min_confidence: 0.35      # below this the line is reported lost
+
+controller:
+  method: proportional      # proportional | pure_pursuit
+  # proportional: steer = kp_offset * offset + kp_angle * (angle_deg / 45)
+  kp_offset: 0.8
+  kp_angle: 0.5
+  # pure_pursuit: steer = kp_pursuit * 2 sin(alpha) / Ld  (Ld normalised to image height)
+  kp_pursuit: 0.4
+  steer_smoothing: 0.3      # 0 = no smoothing, 0.9 = very smooth (EMA factor)
+  max_speed: 0.5            # speed on a straight with full confidence (0..1)
+  min_speed: 0.2            # never go slower than this while the line is tracked
+  curve_slowdown: 0.6       # fraction of speed removed in the sharpest curves
+  curve_angle_full: 35.0    # heading angle (deg) treated as "sharpest curve"
+  full_confidence: 0.7      # confidence at/above which no confidence slowdown applies
+  start_armed: false        # false = speed forced to 0 until GO is pressed (web page or 'g' key)
+
+serial:
+  port: /dev/serial0        # pyserial URL also works, e.g. loop:// for testing
+  baud: 115200
+  rate_hz: 20
+  heartbeat_hz: 5
+  stale_timeout: 0.3        # send a stop if no new vision result for this long (s)
+
+server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000
+  stream_fps: 15            # max MJPEG frame rate per client
+  jpeg_quality: 70
+
+logging:
+  enabled: true
+  dir: logs
+
+snapshots:
+  dir: snapshots
