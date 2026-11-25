@@ -1,0 +1,27 @@
+# Pi 3 configuration. Every tunable number lives here, never hard-coded in the code.
+
+pico:
+  port: /dev/serial/by-id/usb-MicroPython_Board_in_FS_mode_65c3861722555a53-if00
+  # Path to mpremote, relative to the repo root (the venv has it; apt does not).
+  mpremote_bin: .venv/bin/mpremote
+
+lidar:
+  port: /dev/serial0
+  baud: 230400
+
+camera:
+  backend: picamera2   # picamera2 (ribbon camera) | usb (cv2.VideoCapture)
+  stream_size: [320, 240]   # scaled down from the 640x480 sensor mode for speed
+  usb_index: 0              # only used when backend is "usb"
+
+web:
+  host: 0.0.0.0
+  port: 8000
+
+drive:
+  max_speed_mps: 0.48       # measured top speed, no load
+  cruise_speed_mps: 0.20    # planned speed with the sand box
+  wheel_diameter_mm: 70
+  track_width_mm: 230
+  counts_per_wheel_turn: null   # TODO M1: measure by hand-turning a wheel 10x
+  min_output: 0.12              # TODO M1: measure the real dead-band
