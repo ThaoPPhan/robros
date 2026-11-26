@@ -2,6 +2,7 @@
 
 pico:
   port: /dev/serial/by-id/usb-MicroPython_Board_in_FS_mode_65c3861722555a53-if00
+  baud: 115200   # USB CDC serial ignores the actual value; pyserial still needs one
   # Path to mpremote, relative to the repo root (the venv has it; apt does not).
   mpremote_bin: .venv/bin/mpremote
 

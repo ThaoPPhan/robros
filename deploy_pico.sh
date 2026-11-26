@@ -4,6 +4,14 @@
 set -euo pipefail
 
 HOST="pi@pi.local"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# This script only pushes ~/robros/pico FROM THE PI onto the Pico -- it never
+# touches the laptop. Without this, editing pico/ on the laptop and running
+# only deploy_pico.sh silently re-flashes whatever old code is already on the
+# Pi, ignoring every edit (the exact bug that cost a very long debugging
+# session on 2026-11-25).
+"$SCRIPT_DIR/deploy.sh"
 
 ssh "$HOST" bash -s <<'REMOTE'
 set -euo pipefail
@@ -30,11 +38,29 @@ if [ ${#files[@]} -eq 0 ]; then
   exit 0
 fi
 
+# mpremote's cp silently skips a file it thinks is "up to date" (its check
+# isn't reliable against the Pico's filesystem) -- delete each file first so
+# there's nothing to compare against and the copy always actually happens.
 for f in "${files[@]}"; do
-  echo "copying $f"
-  "$MPREMOTE" connect "$PICO_PORT" cp "$f" :"$f"
+  "$MPREMOTE" connect "$PICO_PORT" rm ":$f" > /dev/null 2>&1 || true
 done
 
+# One mpremote session for every copy + the final reset. Separate
+# connect/disconnect per file risked main.py restarting mid-deploy (it auto-runs
+# on any reset) and racing the next copy over the same serial port.
+cmd=("$MPREMOTE" connect "$PICO_PORT")
+first=1
+for f in "${files[@]}"; do
+  echo "copying $f"
+  if [ "$first" -eq 1 ]; then
+    cmd+=(cp "$f" :"$f")
+    first=0
+  else
+    cmd+=(+ cp "$f" :"$f")
+  fi
+done
+cmd+=(+ reset)
+
 echo "resetting Pico"
-"$MPREMOTE" connect "$PICO_PORT" reset
+"${cmd[@]}"
 REMOTE
