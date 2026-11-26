@@ -18,6 +18,7 @@ camera:
 web:
   host: 0.0.0.0
   port: 8000
+  command_timeout_s: 0.3   # no /drive or /stop request for this long -> stop (covers a closed tab too)
 
 drive:
   max_speed_mps: 0.48       # measured top speed, no load
@@ -26,3 +27,5 @@ drive:
   track_width_mm: 230
   counts_per_wheel_turn: null   # TODO M1: measure by hand-turning a wheel 10x
   min_output: 0.12              # TODO M1: measure the real dead-band
+  turn_in_place_fraction: 0.6   # A/D: turn-in-place wheel speed, as a fraction of the speed slider
+  arc_turn_fraction: 0.5        # Q/E: how much the inner wheel slows during an arc turn
